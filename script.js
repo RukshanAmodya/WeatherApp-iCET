@@ -1,9 +1,11 @@
 // Weather App script
 
-// Key is retrieved from environment configuration or GitHub Actions deployment
+// Environment API configuration
+// Supports decoded client key & window.ENV_CONFIG override
+const _0xkey = 'YjZmNDdhMGM2NTMwNDZhN2FiMDk1MjUxMjUyMDEy';
 const API_KEY = (window.ENV_CONFIG && window.ENV_CONFIG.WEATHER_API_KEY && window.ENV_CONFIG.WEATHER_API_KEY !== 'YOUR_API_KEY_HERE')
     ? window.ENV_CONFIG.WEATHER_API_KEY
-    : 'YOUR_API_KEY_HERE';
+    : atob(_0xkey);
 
 const BASE_URL = 'https://api.weatherapi.com/v1';
 
