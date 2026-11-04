@@ -1,0 +1,7 @@
+# Local configuration file (ignored from git for security)
+config.js
+config.local.js
+.env
+.env.local
+.DS_Store
+Thumbs.db
