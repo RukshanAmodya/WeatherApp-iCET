@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- External stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen flex items-center justify-center p-2 sm:p-5 lg:p-10">
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full opacity-0 transition-all duration-300 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-3 max-w-sm">
+        <i id="toast-icon" class="ph-fill ph-warning-circle text-amber-400 text-xl"></i>
+        <span id="toast-msg" class="text-sm font-medium">Notification</span>
+    </div>
+
+    <!-- Detailed Parameters Modal -->
+    <div id="details-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white rounded-[32px] max-w-2xl w-full p-6 sm:p-8 shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-4 mb-6">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900">Weather Telemetry & Parameters</h3>
+                    <p id="modal-subtitle" class="text-xs text-gray-400 mt-0.5">Live parameters fetched from WeatherAPI</p>
+                </div>
+                <button id="close-modal-btn" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+            <div id="modal-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-[1220px] bg-[#F6F6F8] rounded-[32px] sm:rounded-[42px] app-shadow overflow-hidden flex flex-col lg:flex-row min-h-[780px] relative">
+
+        <!-- Loading Spinner Overlay -->
+        <div id="loading-overlay" class="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-40 hidden items-center justify-center">
+            <div class="bg-white px-6 py-4 rounded-2xl shadow-lg flex items-center gap-3">
+                <div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <span class="text-sm font-semibold text-gray-700">Fetching live weather...</span>
+            </div>
+        </div>
+
+        <!-- Left Sidebar: Current Weather -->
+        <aside class="w-full lg:w-[325px] xl:w-[345px] bg-white p-7 sm:p-9 flex flex-col justify-between shrink-0">
+            <div>
+                <!-- Location Search -->
+                <div class="relative flex items-center justify-between gap-2">
+                    <div class="relative flex-1 flex items-center">
+                        <i class="ph ph-magnifying-glass text-gray-800 text-lg absolute left-0 pointer-events-none"></i>
+                        <input 
+                            id="search-input" 
+                            type="text" 
+                            placeholder="Search for places ..." 
+                            autocomplete="off"
+                            class="w-full pl-7 pr-3 py-1.5 text-sm font-medium text-gray-800 placeholder-gray-500 bg-transparent focus:outline-none"
+                        />
+                    </div>
+                    <button 
+                        id="locate-btn" 
+                        title="Use current location"
+                        class="w-9 h-9 rounded-full bg-[#F6F6F8] hover:bg-gray-200 flex items-center justify-center text-gray-600 transition shrink-0"
+                    >
+                        <i class="ph ph-crosshair text-lg"></i>
+                    </button>
+
+                    <!-- Suggestions Dropdown -->
+                    <div id="search-dropdown" class="absolute left-0 right-0 top-11 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-30 hidden max-h-60 overflow-y-auto"></div>
+                </div>
+
+                <!-- Main Weather Icon Illustration -->
+                <div class="my-8 sm:my-10 flex items-center justify-center relative h-52 select-none">
+                    <div id="main-weather-art" class="w-52 h-52 flex items-center justify-center sun-glow"></div>
+                </div>
+
+                <!-- Temperature and Time Info -->
+                <div class="mt-2">
+                    <div class="flex items-start leading-none">
+                        <span id="current-temp" class="text-[68px] sm:text-[76px] font-light tracking-tight text-gray-900">12</span>
+                        <span id="current-unit" class="text-3xl sm:text-4xl font-normal text-gray-900 mt-2">°C</span>
+                    </div>
+
+                    <div class="mt-4 flex items-center gap-1.5 text-base sm:text-lg">
+                        <span id="current-day" class="font-medium text-gray-900">Monday,</span>
+                        <span id="current-time" class="text-gray-400 font-normal">16:00</span>
+                    </div>
+                </div>
+
+                <hr class="my-6 border-gray-100" />
+
+                <!-- Summary Info -->
+                <div class="space-y-3.5 text-xs sm:text-[13px] font-medium text-gray-700">
+                    <div class="flex items-center gap-3">
+                        <span id="summary-condition-icon" class="w-6 flex justify-center">
+                            <i class="ph ph-cloud text-lg text-gray-400"></i>
+                        </span>
+                        <span id="summary-condition-text">Mostly Cloudy</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 flex justify-center">
+                            <svg class="w-4 h-4 text-[#4050E6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                <line x1="6" y1="6" x2="6" y2="14"></line>
+                                <line x1="11" y1="8" x2="11" y2="18"></line>
+                                <line x1="16" y1="5" x2="16" y2="15"></line>
+                                <line x1="21" y1="9" x2="21" y2="19"></line>
+                            </svg>
+                        </span>
+                        <span id="summary-rain-text">Rain - 30%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- City Card Preview -->
+            <div class="mt-8 pt-2">
+                <div 
+                    id="city-card-btn"
+                    title="Click to view full API telemetry"
+                    class="relative h-28 w-full rounded-[22px] overflow-hidden cursor-pointer group shadow-sm"
+                >
+                    <img 
+                        id="city-card-img"
+                        src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=600&q=80" 
+                        alt="Cityscape" 
+                        class="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                    />
+                    <div class="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition flex items-center justify-center px-4 text-center">
+                        <span id="city-card-name" class="text-white font-semibold text-sm tracking-wide drop-shadow">London, United Kingdom</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Main Panel -->
+        <main class="flex-1 p-6 sm:p-9 lg:p-11 flex flex-col justify-between overflow-x-hidden">
+            <!-- Header with Tabs and Unit Switchers -->
+            <header class="flex items-center justify-between gap-4">
+                <div class="flex items-center gap-6 text-base sm:text-lg">
+                    <button 
+                        id="tab-today" 
+                        class="text-gray-400 hover:text-gray-700 font-medium pb-1 transition relative"
+                    >
+                        Today
+                    </button>
+                    <button 
+                        id="tab-week" 
+                        class="text-gray-900 font-semibold pb-1 border-b-2 border-gray-900 transition relative"
+                    >
+                        Week
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-5 sm:gap-7">
+                    <!-- Celsius / Fahrenheit -->
+                    <div class="flex items-center gap-2.5">
+                        <button 
+                            id="btn-celsius" 
+                            class="w-9 h-9 rounded-full bg-[#1A1A1A] text-white text-xs font-bold flex items-center justify-center transition shadow-sm"
+                        >
+                            °C
+                        </button>
+                        <button 
+                            id="btn-fahrenheit" 
+                            class="w-9 h-9 rounded-full bg-white text-gray-800 hover:bg-gray-100 text-xs font-bold flex items-center justify-center transition shadow-sm"
+                        >
+                            °F
+                        </button>
+                    </div>
+
+                    <!-- Profile / Info button -->
+                    <button 
+                        id="profile-btn"
+                        title="View All WeatherAPI Parameters"
+                        class="w-10 h-10 rounded-[14px] overflow-hidden shadow-md ring-2 ring-white hover:scale-105 transition shrink-0"
+                    >
+                        <img 
+                            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80" 
+                            alt="Profile" 
+                            class="w-full h-full object-cover"
+                        />
+                    </button>
+                </div>
+            </header>
+
+            <!-- Forecast Cards Container -->
+            <section class="my-7">
+                <div id="forecast-cards-container" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3.5"></div>
+            </section>
+
+            <!-- Highlights Section -->
+            <section class="flex-1 flex flex-col justify-end">
+                <div class="flex items-center justify-between mb-5">
+                    <h2 class="text-base sm:text-[17px] font-semibold text-gray-900">Today's Highlights</h2>
+                    <button 
+                        id="view-metrics-btn"
+                        class="text-xs font-medium text-gray-400 hover:text-blue-600 flex items-center gap-1 transition"
+                    >
+                        <span>All API Metrics</span>
+                        <i class="ph ph-arrow-up-right"></i>
+                    </button>
+                </div>
+
+                <!-- 6 Highlights Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                    
+                    <!-- 1. UV Index -->
+                    <div class="bg-white rounded-[24px] p-6 card-shadow flex flex-col justify-between h-[195px]">
+                        <span class="text-gray-400 text-[13px] font-medium">UV Index</span>
+                        <div class="relative flex flex-col items-center justify-center mt-1">
+                            <svg class="w-48 h-28 overflow-visible" viewBox="0 0 200 110">
+                                <text x="72" y="16" class="text-[10px] fill-gray-300 font-medium" text-anchor="middle">6</text>
+                                <text x="128" y="16" class="text-[10px] fill-gray-300 font-medium" text-anchor="middle">9</text>
+                                <text x="176" y="48" class="text-[10px] fill-gray-300 font-medium" text-anchor="middle">12</text>
+                                <path 
+                                    d="M 25 95 A 68 68 0 0 1 175 95" 
+                                    fill="none" 
+                                    stroke="#F3F3F5" 
+                                    stroke-width="12" 
+                                    stroke-linecap="round"
+                                />
+                                <path 
+                                    id="uv-arc"
+                                    class="uv-gauge-arc"
+                                    d="M 25 95 A 68 68 0 0 1 175 95" 
+                                    fill="none" 
+                                    stroke="#FFBF5E" 
+                                    stroke-width="16" 
+                                    stroke-linecap="butt"
+                                    stroke-dasharray="235.6"
+                                    stroke-dashoffset="137"
+                                />
+                            </svg>
+                            <span id="uv-value" class="text-[38px] font-medium text-gray-900 leading-none -mt-9">5</span>
+                        </div>
+                    </div>
+
+                    <!-- 2. Wind Status -->
+                    <div class="bg-white rounded-[24px] p-6 card-shadow flex flex-col justify-between h-[195px]">
+                        <span class="text-gray-400 text-[13px] font-medium">Wind Status</span>
+                        <div class="my-1">
+                            <span id="wind-speed" class="text-[42px] font-normal text-gray-900 tracking-tight">7.70</span>
+                            <span id="wind-unit" class="text-base font-medium text-gray-700 ml-0.5">km/h</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-7 h-7 rounded-full border border-gray-100 shadow-sm flex items-center justify-center">
+                                    <i id="wind-compass-icon" class="ph-fill ph-navigation-arrow text-[#4050E6] text-xs transform rotate-45 transition-transform duration-500"></i>
+                                </div>
+                                <span id="wind-dir" class="text-xs font-semibold text-gray-800">WSW</span>
+                            </div>
+                            <span id="wind-gust" class="text-[11px] text-gray-400">Gust: --</span>
+                        </div>
+                    </div>
+
+                    <!-- 3. Sunrise & Sunset -->
+                    <div class="bg-white rounded-[24px] p-6 card-shadow flex flex-col justify-between h-[195px]">
+                        <span class="text-gray-400 text-[13px] font-medium">Sunrise & Sunset</span>
+                        <div class="space-y-3.5 my-auto pt-1">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-9 h-9 rounded-full bg-gradient-to-b from-[#FFDF6D] to-[#FFBA42] shadow-sm flex items-center justify-center text-white shrink-0">
+                                    <i class="ph-bold ph-arrow-up text-sm"></i>
+                                </div>
+                                <div>
+                                    <p id="sunrise-time" class="text-sm font-semibold text-gray-900 leading-tight">6:35 AM</p>
+                                    <p id="sunrise-diff" class="text-[10px] text-gray-400 mt-0.5">- 1m 46s</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-9 h-9 rounded-full bg-gradient-to-b from-[#FFDF6D] to-[#FFBA42] shadow-sm flex items-center justify-center text-white shrink-0">
+                                    <i class="ph-bold ph-arrow-down text-sm"></i>
+                                </div>
+                                <div>
+                                    <p id="sunset-time" class="text-sm font-semibold text-gray-900 leading-tight">5:42 PM</p>
+                                    <p id="sunset-diff" class="text-[10px] text-gray-400 mt-0.5">+ 2m 22s</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Humidity -->
+                    <div class="bg-white rounded-[24px] p-6 card-shadow flex justify-between h-[195px]">
+                        <div class="flex flex-col justify-between">
+                            <span class="text-gray-400 text-[13px] font-medium">Humidity</span>
+                            <div class="flex items-start my-1">
+                                <span id="humidity-value" class="text-[42px] font-normal text-gray-900 leading-none">12</span>
+                                <span class="text-lg font-medium text-gray-800 ml-1 mt-0.5">%</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 text-xs font-medium text-gray-800">
+                                <span id="humidity-status">Normal</span>
+                                <span id="humidity-emoji">👍🏻</span>
+                            </div>
+                        </div>
+                        <div class="h-full flex items-center py-2">
+                            <div class="w-6 h-28 rounded-full border border-gray-100 bg-[#F9F9FB] p-1 flex flex-col justify-end relative">
+                                <div id="humidity-dot" class="w-4 h-4 rounded-full bg-[#4050E6] transition-all duration-500" style="margin-bottom: 12%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. Visibility -->
+                    <div class="bg-white rounded-[24px] p-6 card-shadow flex flex-col justify-between h-[195px]">
+                        <span class="text-gray-400 text-[13px] font-medium">Visibility</span>
+                        <div class="my-1">
+                            <span id="visibility-value" class="text-[42px] font-normal text-gray-900 leading-none">5.2</span>
+                            <span id="visibility-unit" class="text-base font-medium text-gray-800 ml-1">km</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-xs font-medium text-gray-800">
+                            <span id="visibility-status">Average</span>
+                            <span id="visibility-emoji">☹️</span>
+                        </div>
+                    </div>
+
+                    <!-- 6. Air Quality -->
+                    <div class="bg-white rounded-[24px] p-6 card-shadow flex justify-between h-[195px]">
+                        <div class="flex flex-col justify-between">
+                            <span class="text-gray-400 text-[13px] font-medium">Air Quality</span>
+                            <div class="my-1">
+                                <span id="aqi-value" class="text-[42px] font-normal text-gray-900 leading-none">105</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 text-xs font-medium text-gray-800">
+                                <span id="aqi-status">Unhealthy</span>
+                                <span id="aqi-emoji">👎🏼</span>
+                            </div>
+                        </div>
+                        <div class="h-full flex items-center py-2">
+                            <div class="w-6 h-28 rounded-full border border-gray-100 bg-[#F9F9FB] p-1 flex flex-col justify-end relative">
+                                <div id="aqi-dot" class="w-4 h-4 rounded-full bg-[#4050E6] transition-all duration-500" style="margin-bottom: 65%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Main JavaScript Logic -->
+    <script src="script.js"></script>
+</body>
+</html>
